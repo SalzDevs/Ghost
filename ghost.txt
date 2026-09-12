@@ -1,0 +1,72 @@
+------reference ideas-------
+/*
+variable types:
+int, (8 bytes)
+char, (1  bytes)
+string, (len * 1 byte)
+float, (4 bytes)
+pointer, (8 bytes)->(64-bit system) || (4 bytes)->(32-bit system)
+binary, (len * 1 byte)
+*/
+
+/*
+function signature
+func (name)  (arguments) (return types); // functions can return multiple
+
+//real example:
+func increment (int) (int);
+
+//void functions signature:
+func (name);
+
+//real example:
+func printHelloWorld;
+*/
+
+//reserved keyword for the entrypoint of the program (main)
+func main {
+//create a varaible (type name), no inferenced types
+int x;
+
+// conditionals
+if x==0 && !x {
+  x + 1;
+}
+
+// can do for loops like C and python (for of) no more type of loops
+for int i = 0 ; i<10; i++ {
+  //something
+}
+
+//infinite loop
+for {
+  //do something
+}
+
+// i is going to be the same type of x (this case i)
+for i in x {
+  //something
+}
+
+//no while loops
+}
+
+
+---runnable example----
+
+func increment (int val) (int) {
+  return val + 1;
+}
+
+func main {
+
+int x = 0;
+
+for {
+  x = increment(x);
+  if x > 1000 {
+    break;
+  }
+}
+
+}
