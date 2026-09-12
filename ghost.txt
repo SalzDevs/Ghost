@@ -1,54 +1,72 @@
 ------reference ideas-------
 /*
 variable types:
-int, (8 bytes)
-char, (1  bytes)
-string, (len * 1 byte)
-float, (4 bytes)
-pointer, (8 bytes)->(64-bit system) || (4 bytes)->(32-bit system)
-binary, (len * 1 byte)
+int, (8 bytes, signed 64-bit)
+float, (4 bytes, 32-bit)
+char, (1 byte)
+bool, (1 byte, true/false)
+string, (len * 1 byte, UTF-8, iterable of char)
+binary, (len * 1 byte, raw bytes, iterable of char)
+pointer, (8 bytes on 64-bit, 4 bytes on 32-bit)
+error, (builtin, holds message string, nil if no error)
 */
 
 /*
-function signature
-func (name)  (arguments) (return types); // functions can return multiple
+function signature:
+func name (type arg, ...) (type, ...) { body }
+- args are `type name`, comma-separated
+- returns are `type`, comma-separated, Go-style, unnamed
+- void: omit return tuple
+- declaration (no body): same signature + ;
 
-//real example:
-func increment (int) (int);
-
-//void functions signature:
-func (name);
-
-//real example:
+//declarations:
+func increment (int val) (int);
+func divide (int a, int b) (int, string, error);
 func printHelloWorld;
-*/
 
-//reserved keyword for the entrypoint of the program (main)
-func main {
-//create a varaible (type name), no inferenced types
-int x;
-
-// conditionals
-if x==0 && !x {
-  x + 1;
+//definition:
+func increment (int val) (int) {
+  return val + 1;
 }
 
-// can do for loops like C and python (for of) no more type of loops
-for int i = 0 ; i<10; i++ {
+//multiple return:
+func divide (int a, int b) (int, string, error) {
+  return q, msg, err;
+}
+
+//call with multi-assign (types always explicit, no inference):
+int q, string msg, error err = divide(10, 2);
+*/
+
+//variables:
+//declare: type name;
+int x;
+//init: type name = value;
+int y = 0;
+//no inferred types, ++ is statement-only shorthand for x = x + 1;
+
+//reserved keyword for the entrypoint of the program (main, void, no args)
+func main {
+// conditionals: cond must be bool, no parens, && || !, comparisons return bool
+if x == 0 && !done {
+  x = x + 1;
+}
+
+// 1. C-style for: for init; cond; post { }
+for int i = 0; i < 10; i++ {
   //something
 }
 
-//infinite loop
+// 2. infinite loop (no while loops, use break/continue here)
 for {
   //do something
 }
 
-// i is going to be the same type of x (this case i)
-for i in x {
+// 3. for-in over iterable (string/binary): for elem in collection { }
+// elem is char, same element type of collection
+for c in myString {
   //something
 }
-
-//no while loops
 }
 
 
@@ -59,14 +77,11 @@ func increment (int val) (int) {
 }
 
 func main {
-
 int x = 0;
-
 for {
   x = increment(x);
   if x > 1000 {
     break;
   }
 }
-
 }
