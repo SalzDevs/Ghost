@@ -1,0 +1,16 @@
+Line: x = increment(x);
+
+Tokens:
+1. NAME("x")        - variable being assigned to
+2. ASSIGN("=")      - assignment, not comparison (==)
+3. NAME("increment")- function name, not a keyword
+4. LPAREN("(")      - start of call args
+5. NAME("x")        - argument variable
+6. RPAREN(")")      - end of call args
+7. SEMICOLON(";")   - end of statement
+
+Why this split:
+- "increment" is a NAME because only words like func, int, if, for are keywords.
+- "(" and ")" are always separate tokens, even with no space: increment(x)
+- "=" vs "==" matters: "=" is assignment, "==" returns bool for if conditions.
+- ";" marks statement end, so newline alone means nothing.
