@@ -143,13 +143,14 @@ const char *tok_name(TokenType t) {
   }
 }
 
-int main(){
+char* loadFile(const char* filename) {
   const char *path = "example.ghost";
   FILE *f = fopen(path, "rb");
   if (f == NULL) {
     printf("Not able to open the file.\n");
-    return 1;
+    return NULL;
   }
+  
   fseek(f, 0, SEEK_END);
   long n = ftell(f);
   fseek(f, 0, SEEK_SET);
@@ -157,6 +158,13 @@ int main(){
   fread(src, 1, n, f);
   src[n] = '\0';
   fclose(f);
+
+  return src;
+}
+
+int main(){
+  const char *path = "example.ghost";
+  char* src = loadFile(path);
 
   Lexer lex = {src, 0};
   for (;;) {
