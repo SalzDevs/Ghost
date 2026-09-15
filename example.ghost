@@ -4,6 +4,7 @@ func increment (int val) (int) {
 
 func main {
 int x = 0;
+int x @ 2;
 for {
   x = increment(x);
   if x > 1000 {

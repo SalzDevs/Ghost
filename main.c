@@ -2,6 +2,7 @@
 #include "string.h"
 #include "assert.h"
 #include <ctype.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -31,6 +32,7 @@ typedef enum {
 
 typedef struct {
   TokenType type;
+  // Ownership: text is malloc'd or NULL. Caller owns it and must free().
   char* text;
 } Token ;
 
@@ -39,24 +41,47 @@ typedef struct {
   int pos;
   int row;
   int col;
+  // 1-based start of the last token produced (set by next_token)
+  int tok_row;
+  int tok_col;
 } Lexer;
+
+static void advance(Lexer* lexer) {
+  if (lexer->src[lexer->pos] == '\n') {
+    lexer->row++;
+    lexer->col = 1;
+  } else {
+    lexer->col++;
+  }
+  lexer->pos++;
+}
+
+static Token next_token_raw(Lexer* lexer);
 
 Token next_token(Lexer* lexer) {
   assert(lexer != NULL);
   
-  // skip comments (treat then like white spaces)
+  // skip comments (treat them like white spaces)
   while (1) {
     while (isspace((unsigned char)lexer->src[lexer->pos]))
-      lexer->pos++;
+      advance(lexer);
     if (lexer->src[lexer->pos] == '/' &&
         lexer->src[lexer->pos + 1] == '/') {
       while (lexer->src[lexer->pos] != '\0' &&
              lexer->src[lexer->pos] != '\n')
-        lexer->pos++;
+        advance(lexer);
       continue;
     }
     break;
   }
+
+  lexer->tok_row = lexer->row;
+  lexer->tok_col = lexer->col;
+  return next_token_raw(lexer);
+}
+
+static Token next_token_raw(Lexer* lexer) {
+  assert(lexer != NULL);
 
   if (lexer->src[lexer->pos] == '\0')
     return (Token){.type = TOK_EOF, .text = NULL};
@@ -68,7 +93,7 @@ Token next_token(Lexer* lexer) {
     int start = lexer->pos;
     while (isalnum((unsigned char)lexer->src[lexer->pos]) ||
            lexer->src[lexer->pos] == '_')
-      lexer->pos++;
+      advance(lexer);
     int len = lexer->pos - start;
     char *buf = malloc(len + 1);
     memcpy(buf, &lexer->src[start], len);
@@ -86,7 +111,7 @@ Token next_token(Lexer* lexer) {
   if (isdigit((unsigned char)c)) {
     int start = lexer->pos;
     while (isdigit((unsigned char)lexer->src[lexer->pos]))
-      lexer->pos++;
+      advance(lexer);
     int len = lexer->pos - start;
     char *buf = malloc(len + 1);
     memcpy(buf, &lexer->src[start], len);
@@ -97,15 +122,16 @@ Token next_token(Lexer* lexer) {
   // == vs =
   if (c == '=') {
     if (lexer->src[lexer->pos + 1] == '=') {
-      lexer->pos += 2;
+      advance(lexer);
+      advance(lexer);
       return (Token){TOK_EQ, NULL};
     }
-    lexer->pos++;
+    advance(lexer);
     return (Token){TOK_ASSIGN, NULL};
   }
 
   // single chars (no text needed; type says it all)
-  lexer->pos++;
+  advance(lexer);
   switch (c) {
     case '+': return (Token){TOK_PLUS, NULL};
     case '>': return (Token){TOK_GT, NULL};
@@ -117,7 +143,10 @@ Token next_token(Lexer* lexer) {
     case ',': return (Token){TOK_COMMA, NULL};
   }
 
-  return (Token){TOK_ERR, NULL};
+  char *buf = malloc(2);
+  buf[0] = c;
+  buf[1] = '\0';
+  return (Token){TOK_ERR, buf};
 }
 
 const char *tok_name(TokenType t) {
@@ -171,13 +200,20 @@ int main(){
   if (src == NULL) {
     return 1;
   }
-
-  Lexer lex = {src, 0};
+  int err_count = 0;
+  Lexer lex = {src, 0, 1, 1, 1, 1};
   for (;;) {
     Token t = next_token(&lex);
-    printf("%s %s\n", tok_name(t.type), t.text ? t.text : "");
+    if (t.type == TOK_ERR) {
+      fprintf(stderr, "error at (Line %d Column: %d): unexpected character: '%s'\n", lex.tok_row, lex.tok_col, t.text);
+      err_count++;
+    } else {
+      printf("%s %s\n", tok_name(t.type), t.text ? t.text : "");
+    }
     free(t.text);
     if (t.type == TOK_EOF) break;
   }
   free(src);
+
+  return err_count ? 1 : 0;  
 }
