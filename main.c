@@ -25,18 +25,20 @@ typedef enum {
   TOK_SEMI,
   TOK_COMMA,
   TOK_COMM,
-  TOK_EOF
+  TOK_EOF,
+  TOK_ERR,
 } TokenType;
 
 typedef struct {
   TokenType type;
-  // Ownership: text is malloc'd or NULL. Caller owns it and must free().
   char* text;
 } Token ;
 
 typedef struct {
   char* src;
   int pos;
+  int row;
+  int col;
 } Lexer;
 
 Token next_token(Lexer* lexer) {
@@ -115,7 +117,7 @@ Token next_token(Lexer* lexer) {
     case ',': return (Token){TOK_COMMA, NULL};
   }
 
-  return next_token(lexer);
+  return (Token){TOK_ERR, NULL};
 }
 
 const char *tok_name(TokenType t) {
@@ -140,6 +142,7 @@ const char *tok_name(TokenType t) {
     case TOK_COMMA: return "COMMA";
     case TOK_COMM: return "COMM";
     case TOK_EOF: return "EOF";
+    case TOK_ERR: return "ERR";
     default: return "OTHER";
   }
 }
