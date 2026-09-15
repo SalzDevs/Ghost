@@ -30,6 +30,7 @@ typedef enum {
 
 typedef struct {
   TokenType type;
+  // Ownership: text is malloc'd or NULL. Caller owns it and must free().
   char* text;
 } Token ;
 
@@ -56,7 +57,7 @@ Token next_token(Lexer* lexer) {
   }
 
   if (lexer->src[lexer->pos] == '\0')
-    return (Token){.type = TOK_EOF, .text = ""};
+    return (Token){.type = TOK_EOF, .text = NULL};
 
   char c = lexer->src[lexer->pos];
 
@@ -95,23 +96,23 @@ Token next_token(Lexer* lexer) {
   if (c == '=') {
     if (lexer->src[lexer->pos + 1] == '=') {
       lexer->pos += 2;
-      return (Token){TOK_EQ, "="}; 
+      return (Token){TOK_EQ, NULL};
     }
     lexer->pos++;
-    return (Token){TOK_ASSIGN, "="};
+    return (Token){TOK_ASSIGN, NULL};
   }
 
-  // single chars
+  // single chars (no text needed; type says it all)
   lexer->pos++;
   switch (c) {
-    case '+': return (Token){TOK_PLUS, "+"};
-    case '>': return (Token){TOK_GT, ">"};
-    case '(': return (Token){TOK_LPAREN, "("};
-    case ')': return (Token){TOK_RPAREN, ")"};
-    case '{': return (Token){TOK_LBRACE, "{"};
-    case '}': return (Token){TOK_RBRACE, "}"};
-    case ';': return (Token){TOK_SEMI, ";"};
-    case ',': return (Token){TOK_COMMA, ","};
+    case '+': return (Token){TOK_PLUS, NULL};
+    case '>': return (Token){TOK_GT, NULL};
+    case '(': return (Token){TOK_LPAREN, NULL};
+    case ')': return (Token){TOK_RPAREN, NULL};
+    case '{': return (Token){TOK_LBRACE, NULL};
+    case '}': return (Token){TOK_RBRACE, NULL};
+    case ';': return (Token){TOK_SEMI, NULL};
+    case ',': return (Token){TOK_COMMA, NULL};
   }
 
   return next_token(lexer);
@@ -144,8 +145,7 @@ const char *tok_name(TokenType t) {
 }
 
 char* loadFile(const char* filename) {
-  const char *path = "example.ghost";
-  FILE *f = fopen(path, "rb");
+  FILE *f = fopen(filename, "rb");
   if (f == NULL) {
     printf("Not able to open the file.\n");
     return NULL;
@@ -165,11 +165,15 @@ char* loadFile(const char* filename) {
 int main(){
   const char *path = "example.ghost";
   char* src = loadFile(path);
+  if (src == NULL) {
+    return 1;
+  }
 
   Lexer lex = {src, 0};
   for (;;) {
     Token t = next_token(&lex);
-    printf("%s %s\n", tok_name(t.type), t.text);
+    printf("%s %s\n", tok_name(t.type), t.text ? t.text : "");
+    free(t.text);
     if (t.type == TOK_EOF) break;
   }
   free(src);
