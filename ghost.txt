@@ -72,6 +72,8 @@ for c in myString {
 
 ---runnable example----
 
+//test comment
+
 func increment (int val) (int) {
   return val + 1;
 }

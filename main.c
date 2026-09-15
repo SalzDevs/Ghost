@@ -24,6 +24,7 @@ typedef enum {
   TOK_RBRACE,
   TOK_SEMI,
   TOK_COMMA,
+  TOK_COMM,
   TOK_EOF
 } TokenType;
 
@@ -39,9 +40,20 @@ typedef struct {
 
 Token next_token(Lexer* lexer) {
   assert(lexer != NULL);
-
-  while (isspace((unsigned char)lexer->src[lexer->pos]))
-    lexer->pos++;
+  
+  // skip comments (treat then like white spaces)
+  while (1) {
+    while (isspace((unsigned char)lexer->src[lexer->pos]))
+      lexer->pos++;
+    if (lexer->src[lexer->pos] == '/' &&
+        lexer->src[lexer->pos + 1] == '/') {
+      while (lexer->src[lexer->pos] != '\0' &&
+             lexer->src[lexer->pos] != '\n')
+        lexer->pos++;
+      continue;
+    }
+    break;
+  }
 
   if (lexer->src[lexer->pos] == '\0')
     return (Token){.type = TOK_EOF, .text = ""};
@@ -115,13 +127,14 @@ const char *tok_name(TokenType t) {
     case TOK_LPAREN: return "LPAREN";
     case TOK_RPAREN: return "RPAREN";
     case TOK_SEMI: return "SEMI";
+    case TOK_COMM: return "COMM";
     case TOK_EOF: return "EOF";
     default: return "OTHER";
   }
 }
 
 int main(){
-  char *src = "x = increment(x);";
+  char *src = "//test comment";
   Lexer lex = {src, 0};
   for (;;) {
     Token t = next_token(&lex);
