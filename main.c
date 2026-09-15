@@ -121,12 +121,22 @@ const char *tok_name(TokenType t) {
   switch (t) {
     case TOK_FUNC: return "FUNC";
     case TOK_INT: return "INT";
+    case TOK_IF: return "IF";
+    case TOK_FOR: return "FOR";
+    case TOK_BREAK: return "BREAK";
+    case TOK_RETURN: return "RETURN";
     case TOK_NAME: return "NAME";
     case TOK_NUMBER: return "NUMBER";
     case TOK_ASSIGN: return "ASSIGN";
+    case TOK_EQ: return "EQ";
+    case TOK_PLUS: return "PLUS";
+    case TOK_GT: return "GT";
     case TOK_LPAREN: return "LPAREN";
     case TOK_RPAREN: return "RPAREN";
+    case TOK_LBRACE: return "LBRACE";
+    case TOK_RBRACE: return "RBRACE";
     case TOK_SEMI: return "SEMI";
+    case TOK_COMMA: return "COMMA";
     case TOK_COMM: return "COMM";
     case TOK_EOF: return "EOF";
     default: return "OTHER";
@@ -134,11 +144,25 @@ const char *tok_name(TokenType t) {
 }
 
 int main(){
-  char *src = "//test comment";
+  const char *path = "example.ghost";
+  FILE *f = fopen(path, "rb");
+  if (f == NULL) {
+    printf("Not able to open the file.\n");
+    return 1;
+  }
+  fseek(f, 0, SEEK_END);
+  long n = ftell(f);
+  fseek(f, 0, SEEK_SET);
+  char *src = malloc(n + 1);
+  fread(src, 1, n, f);
+  src[n] = '\0';
+  fclose(f);
+
   Lexer lex = {src, 0};
   for (;;) {
     Token t = next_token(&lex);
     printf("%s %s\n", tok_name(t.type), t.text);
     if (t.type == TOK_EOF) break;
   }
+  free(src);
 }

@@ -1,0 +1,13 @@
+func increment (int val) (int) {
+  return val + 1;
+}
+
+func main {
+int x = 0;
+for {
+  x = increment(x);
+  if x > 1000 {
+    break;
+  }
+}
+}
