@@ -200,6 +200,73 @@ void parser_advance(Parser* p) {
   p->cur = next_token(p->lex);
 }
 
+void free_funcdef(FuncDef* f) {
+  free(f->name);
+  for (int i = 0; i < f->nargs; i++) {
+    free(f->args[i].type);
+    free(f->args[i].name);
+  }
+  for (int i = 0; i < f->nreturns; i++) free(f->return_types[i]);
+  f->name = NULL; f->nargs = 0; f->nreturns = 0;
+}
+
+int parse_func(Parser* p, FuncDef* out) {
+  out->name = NULL; out->nargs = 0; out->nreturns = 0;
+
+  if (p->cur.type != TOK_FUNC) return 0;
+  parser_advance(p);
+
+  if (p->cur.type != TOK_NAME) return 0;
+  out->name = strdup(p->cur.text);
+  parser_advance(p);
+
+  if (p->cur.type == TOK_LPAREN) {
+    parser_advance(p);
+    while (p->cur.type != TOK_RPAREN && p->cur.type != TOK_EOF) {
+      if (out->nargs >= 8) { free_funcdef(out); return 0; }
+      if (p->cur.type != TOK_INT && p->cur.type != TOK_NAME) {
+        free_funcdef(out);
+        return 0;
+      }
+      char *t = strdup(p->cur.text);
+      parser_advance(p);
+      if (p->cur.type != TOK_NAME) {
+        free(t);
+        free_funcdef(out);
+        return 0;
+      }
+      char *n = strdup(p->cur.text);
+      parser_advance(p);
+      out->args[out->nargs].type = t;
+      out->args[out->nargs].name = n;
+      out->nargs++;
+      if (p->cur.type == TOK_COMMA) { parser_advance(p); continue; }
+      break;
+    }
+    if (p->cur.type != TOK_RPAREN) { free_funcdef(out); return 0; }
+    parser_advance(p);
+  }
+
+  if (p->cur.type == TOK_LPAREN) {
+    parser_advance(p);
+    while (p->cur.type != TOK_RPAREN && p->cur.type != TOK_EOF) {
+      if (out->nreturns >= 8) { free_funcdef(out); return 0; }
+      if (p->cur.type != TOK_INT && p->cur.type != TOK_NAME) {
+        free_funcdef(out);
+        return 0;
+      }
+      out->return_types[out->nreturns++] = strdup(p->cur.text);
+      parser_advance(p);
+      if (p->cur.type == TOK_COMMA) { parser_advance(p); continue; }
+      break;
+    }
+    if (p->cur.type != TOK_RPAREN) { free_funcdef(out); return 0; }
+    parser_advance(p);
+  }
+
+  return 1;
+}
+
 char* loadFile(const char* filename) {
   FILE *f = fopen(filename, "rb");
   if (f == NULL) {
