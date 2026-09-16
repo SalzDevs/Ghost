@@ -46,6 +46,25 @@ typedef struct {
   int tok_col;
 } Lexer;
 
+typedef struct {
+  char* type;
+  char* name;
+}Param;
+
+typedef struct {
+  char* name;
+  Param* args;
+  int nargs;
+  char** return_types;
+  int nreturns;
+} FuncDef;
+
+typedef struct {
+  Lexer* lex;
+  // always contains the next token (lookahead);
+  Token cur;
+} Parser;
+
 static void advance(Lexer* lexer) {
   if (lexer->src[lexer->pos] == '\n') {
     lexer->row++;
@@ -176,6 +195,11 @@ const char *tok_name(TokenType t) {
   }
 }
 
+void parser_advance(Parser* p) {
+  free(p->cur.text);
+  p->cur = next_token(p->lex);
+}
+
 char* loadFile(const char* filename) {
   FILE *f = fopen(filename, "rb");
   if (f == NULL) {
@@ -200,19 +224,25 @@ int main(){
   if (src == NULL) {
     return 1;
   }
+
   int err_count = 0;
   Lexer lex = {src, 0, 1, 1, 1, 1};
+
+
+  Parser p = {&lex, next_token(&lex)};
+
   for (;;) {
-    Token t = next_token(&lex);
-    if (t.type == TOK_ERR) {
-      fprintf(stderr, "error at (Line %d Column: %d): unexpected character: '%s'\n", lex.tok_row, lex.tok_col, t.text);
+    TokenType tt = p.cur.type;
+    if (tt == TOK_ERR) {
+      fprintf(stderr, "error at (Line %d Column: %d): unexpected character: '%s'\n", lex.tok_row, lex.tok_col, p.cur.text);
       err_count++;
     } else {
-      printf("%s %s\n", tok_name(t.type), t.text ? t.text : "");
+      printf("%s %s\n", tok_name(tt), p.cur.text ? p.cur.text : "");
     }
-    free(t.text);
-    if (t.type == TOK_EOF) break;
+    if (tt == TOK_EOF) break;
+    parser_advance(&p);
   }
+  free(p.cur.text);
   free(src);
 
   return err_count ? 1 : 0;  
