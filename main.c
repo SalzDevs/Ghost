@@ -59,6 +59,31 @@ typedef struct {
   int nreturns;
 } FuncDef;
 
+typedef enum { EXPR_NUMBER, EXPR_NAME, EXPR_BINARY } ExprKind;
+
+typedef struct Expr {
+  ExprKind kind;
+  union {
+    long number;
+    char *name;
+    struct { struct Expr *left, *right; } binary; // '+' only for now
+  } as;
+} Expr;
+
+typedef struct {
+  Expr *vals[8];
+  int nvals; // 0 void, 1 `x+1`, 3 `x,1,5`
+} ReturnStmt;
+
+typedef enum { STMT_RETURN } StmtKind;
+
+typedef struct {
+  StmtKind kind;
+  union {
+    ReturnStmt ret;
+  } as;
+} Stmt;
+
 typedef struct {
   Lexer* lex;
   // always contains the next token (lookahead);
@@ -227,6 +252,74 @@ char* stringify_token(Token t) {
     default: return "Unknown single Char Token";
   }
 }
+void free_expr(Expr* e) {
+  if (!e) return;
+  if (e->kind == EXPR_NAME) free(e->as.name);
+  else if (e->kind == EXPR_BINARY) {
+    free_expr(e->as.binary.left);
+    free_expr(e->as.binary.right);
+  }
+  free(e);
+}
+
+Expr* parse_primary(Parser* p) {
+  if (p->cur.type == TOK_NUMBER) {
+    Expr *e = malloc(sizeof(Expr));
+    e->kind = EXPR_NUMBER;
+    e->as.number = atol(p->cur.text);
+    parser_advance(p);
+    return e;
+  }
+  if (p->cur.type == TOK_NAME) {
+    Expr *e = malloc(sizeof(Expr));
+    e->kind = EXPR_NAME;
+    e->as.name = strdup(p->cur.text);
+    parser_advance(p);
+    return e;
+  }
+  return NULL;
+}
+
+Expr* parse_expr(Parser* p) {
+  Expr *left = parse_primary(p);
+  if (!left) return NULL;
+  while (p->cur.type == TOK_PLUS) {
+    parser_advance(p);
+    Expr *right = parse_primary(p);
+    if (!right) { free_expr(left); return NULL; }
+    Expr *node = malloc(sizeof(Expr));
+    node->kind = EXPR_BINARY;
+    node->as.binary.left = left;
+    node->as.binary.right = right;
+    left = node;
+  }
+  return left;
+}
+
+void free_return(ReturnStmt* r) {
+  for (int i = 0; i < r->nvals; i++) free_expr(r->vals[i]);
+  r->nvals = 0;
+}
+
+//TODO: Check if asserting is the correct move here
+int parse_return(Parser *p, ReturnStmt *out) {
+  if (p->cur.type != TOK_RETURN) return 0;
+  out->nvals = 0;
+  parser_advance(p);
+
+  while (p->cur.type != TOK_SEMI && p->cur.type != TOK_EOF) {
+    if (out->nvals >= 8) { free_return(out); return 0; }
+    Expr* e = parse_expr(p);
+    if (!e) { free_return(out); return 0; }
+    out->vals[out->nvals++] = e;
+    if (p->cur.type == TOK_COMMA) { parser_advance(p); continue; }
+    break;
+  }
+
+  if (p->cur.type != TOK_SEMI) { free_return(out); return 0; }
+  parser_advance(p);
+  return 1;
+}
 
 int parse_func(Parser* p, FuncDef* out) {
   out->name = NULL; out->nargs = 0; out->nreturns = 0;
@@ -287,7 +380,6 @@ int parse_func(Parser* p, FuncDef* out) {
   }
   parser_advance(p);
   
-  int num_tokens_body = 1;
   int depth = 1;
   while (p->cur.type != TOK_EOF) {
     if (p->cur.type == TOK_LBRACE) {
@@ -299,11 +391,17 @@ int parse_func(Parser* p, FuncDef* out) {
         break;
       }
     }
-    printf("Reading body! Current Number of Tokens in the Body:{%d} Current Token:%s Current depth: %d\n", num_tokens_body, stringify_token(p->cur), depth);
-    num_tokens_body++;
+    if (p->cur.type == TOK_RETURN) {
+      ReturnStmt ret;
+      if(!parse_return(p, &ret)) {free_funcdef(out); return 0;}
+      printf("parsed return nvals=%d depth=%d\n", ret.nvals, depth);
+      free_return(&ret);
+      continue;
+    }
+    printf("Reading body! Current Token:%s Current depth: %d\n", stringify_token(p->cur), depth);
     parser_advance(p);
   }
-  printf("Reading body! Current Number of Tokens in the Body:{%d} Current Token:%s Current depth: %d\n", num_tokens_body, stringify_token(p->cur), depth);
+  printf("Reading body! Current Token:%s Current depth: %d\n", stringify_token(p->cur), depth);
 
   if (p->cur.type != TOK_RBRACE) { free_funcdef(out) ; return 0; }
 
