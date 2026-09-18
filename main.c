@@ -210,6 +210,24 @@ void free_funcdef(FuncDef* f) {
   f->name = NULL; f->nargs = 0; f->nreturns = 0;
 }
 
+char* stringify_token(Token t) {
+  if (t.text!=NULL) {
+    return t.text;
+  }
+
+  switch (t.type) {
+    case TOK_PLUS: return "+";
+    case TOK_GT: return ">";
+    case TOK_LPAREN: return "(";
+    case TOK_RPAREN: return ")";
+    case TOK_LBRACE: return "{";
+    case TOK_RBRACE: return "}";
+    case TOK_SEMI: return ";";
+    case TOK_COMMA: return ",";
+    default: return "Unknown single Char Token";
+  }
+}
+
 int parse_func(Parser* p, FuncDef* out) {
   out->name = NULL; out->nargs = 0; out->nreturns = 0;
 
@@ -281,11 +299,11 @@ int parse_func(Parser* p, FuncDef* out) {
         break;
       }
     }
-    printf("Reading body! Current Number of Tokens in the Body {%d} Token {%s} depth {%d}\n", num_tokens_body, p->cur.text, depth);
+    printf("Reading body! Current Number of Tokens in the Body:{%d} Current Token:%s Current depth: %d\n", num_tokens_body, stringify_token(p->cur), depth);
     num_tokens_body++;
     parser_advance(p);
   }
-  printf("Reading body! Current Number of Tokens in the Body {%d} Token {%s} depth {%d}\n", num_tokens_body, p->cur.text, depth);
+  printf("Reading body! Current Number of Tokens in the Body:{%d} Current Token:%s Current depth: %d\n", num_tokens_body, stringify_token(p->cur), depth);
 
   if (p->cur.type != TOK_RBRACE) { free_funcdef(out) ; return 0; }
 
