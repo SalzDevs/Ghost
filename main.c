@@ -53,9 +53,9 @@ typedef struct {
 
 typedef struct {
   char* name;
-  Param* args;
+  Param args[8];
   int nargs;
-  char** return_types;
+  char* return_types[8];
   int nreturns;
 } FuncDef;
 
@@ -264,6 +264,31 @@ int parse_func(Parser* p, FuncDef* out) {
     parser_advance(p);
   }
 
+  if (p->cur.type != TOK_LBRACE) {
+    return 0;
+  }
+  parser_advance(p);
+  
+  int num_tokens_body = 1;
+  int depth = 1;
+  while (p->cur.type != TOK_EOF) {
+    if (p->cur.type == TOK_LBRACE) {
+      depth++;
+    }
+    if (p->cur.type==TOK_RBRACE) {
+      depth--;
+      if (depth==0) {
+        break;
+      }
+    }
+    printf("Reading body! Current Number of Tokens in the Body {%d} Token {%s} depth {%d}\n", num_tokens_body, p->cur.text, depth);
+    num_tokens_body++;
+    parser_advance(p);
+  }
+  printf("Reading body! Current Number of Tokens in the Body {%d} Token {%s} depth {%d}\n", num_tokens_body, p->cur.text, depth);
+
+  if (p->cur.type != TOK_RBRACE) { free_funcdef(out) ; return 0; }
+
   return 1;
 }
 
@@ -299,14 +324,27 @@ int main(){
   Parser p = {&lex, next_token(&lex)};
 
   for (;;) {
-    TokenType tt = p.cur.type;
-    if (tt == TOK_ERR) {
+    if (p.cur.type == TOK_EOF) break;
+    if (p.cur.type == TOK_FUNC) {
+      FuncDef fd;
+      if (parse_func(&p, &fd)) {
+        printf("func %s nargs=%d nreturns=%d\n", fd.name, fd.nargs, fd.nreturns);
+        free_funcdef(&fd);
+        parser_advance(&p); // eat closing RBRACE left by parse_func
+      } else {
+        fprintf(stderr, "parse error at (Line %d Column: %d)\n", lex.tok_row, lex.tok_col);
+        err_count++;
+        parser_advance(&p);
+      }
+      continue;
+    }
+    if (p.cur.type == TOK_ERR) {
       fprintf(stderr, "error at (Line %d Column: %d): unexpected character: '%s'\n", lex.tok_row, lex.tok_col, p.cur.text);
       err_count++;
     } else {
-      printf("%s %s\n", tok_name(tt), p.cur.text ? p.cur.text : "");
+      fprintf(stderr, "error at (Line %d Column: %d): unexpected %s\n", lex.tok_row, lex.tok_col, tok_name(p.cur.type));
+      err_count++;
     }
-    if (tt == TOK_EOF) break;
     parser_advance(&p);
   }
   free(p.cur.text);
