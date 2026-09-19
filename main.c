@@ -17,7 +17,8 @@ typedef enum {
   TOK_NUMBER,
   TOK_ASSIGN, 
   TOK_EQ,   
-  TOK_PLUS, 
+  TOK_PLUS,
+  TOK_MINUS,
   TOK_GT,
   TOK_LPAREN,
   TOK_RPAREN,
@@ -66,7 +67,7 @@ typedef struct Expr {
   union {
     long number;
     char *name;
-    struct { struct Expr *left, *right; } binary; // '+' only for now
+    struct { struct Expr *left, *right; } binary; // '+' and '-' only for now
   } as;
 } Expr;
 
@@ -178,6 +179,7 @@ static Token next_token_raw(Lexer* lexer) {
   advance(lexer);
   switch (c) {
     case '+': return (Token){TOK_PLUS, NULL};
+    case '-': return (Token){TOK_MINUS, NULL};
     case '>': return (Token){TOK_GT, NULL};
     case '(': return (Token){TOK_LPAREN, NULL};
     case ')': return (Token){TOK_RPAREN, NULL};
@@ -206,6 +208,7 @@ const char *tok_name(TokenType t) {
     case TOK_ASSIGN: return "ASSIGN";
     case TOK_EQ: return "EQ";
     case TOK_PLUS: return "PLUS";
+    case TOK_MINUS: return "MINUS";
     case TOK_GT: return "GT";
     case TOK_LPAREN: return "LPAREN";
     case TOK_RPAREN: return "RPAREN";
@@ -242,6 +245,7 @@ char* stringify_token(Token t) {
 
   switch (t.type) {
     case TOK_PLUS: return "+";
+    case TOK_MINUS: return "-";
     case TOK_GT: return ">";
     case TOK_LPAREN: return "(";
     case TOK_RPAREN: return ")";
@@ -283,7 +287,7 @@ Expr* parse_primary(Parser* p) {
 Expr* parse_expr(Parser* p) {
   Expr *left = parse_primary(p);
   if (!left) return NULL;
-  while (p->cur.type == TOK_PLUS) {
+  while (p->cur.type == TOK_PLUS || p->cur.type == TOK_MINUS) {
     parser_advance(p);
     Expr *right = parse_primary(p);
     if (!right) { free_expr(left); return NULL; }
@@ -301,7 +305,7 @@ void free_return(ReturnStmt* r) {
   r->nvals = 0;
 }
 
-//TODO: Check if asserting is the correct move here
+
 int parse_return(Parser *p, ReturnStmt *out) {
   if (p->cur.type != TOK_RETURN) return 0;
   out->nvals = 0;
