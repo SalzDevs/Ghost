@@ -283,6 +283,22 @@ Expr* parse_primary(Parser* p) {
   }
   return NULL;
 }
+void print_expr(Expr* e) {
+  if (!e) {
+    printf("Expression being called cant be NULL");
+  }
+
+  if (e->kind == EXPR_NUMBER) printf("%ld", e->as.number);
+  else if (e->kind == EXPR_NAME) printf("%s", e->as.name);
+  else {
+    printf("(");
+    print_expr(e->as.binary.left);
+    printf(" + ");
+    print_expr(e->as.binary.right);
+    printf(")");
+    printf("\n");
+  }
+}
 
 Expr* parse_expr(Parser* p) {
   Expr *left = parse_primary(p);
@@ -314,6 +330,7 @@ int parse_return(Parser *p, ReturnStmt *out) {
   while (p->cur.type != TOK_SEMI && p->cur.type != TOK_EOF) {
     if (out->nvals >= 8) { free_return(out); return 0; }
     Expr* e = parse_expr(p);
+    print_expr(e);
     if (!e) { free_return(out); return 0; }
     out->vals[out->nvals++] = e;
     if (p->cur.type == TOK_COMMA) { parser_advance(p); continue; }
@@ -431,7 +448,7 @@ char* loadFile(const char* filename) {
 }
 
 int main(){
-  const char *path = "example.ghost";
+  const char *path = "one_func_ex.ghost";
   char* src = loadFile(path);
   if (src == NULL) {
     return 1;
